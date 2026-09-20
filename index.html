@@ -215,28 +215,75 @@ function addCard(){
  if(msg)msg.textContent="✓ Карточка сохранена. Можно сразу добавить следующую.";
  tiEl.focus();
 } function editCard(id){let c=state.cards.find(x=>String(x.id)===String(id));if(!c)return;let ti=prompt("Тибетское слово:",c.ti);if(ti===null)return;let note=prompt("Комментарий / произношение:",c.note||"");if(note===null)return;let ru=prompt("Русский перевод:",c.ru);if(ru===null)return;c.ti=ti.trim();c.note=note.trim();c.ru=ru.trim();save();renderEdit()} function deleteCard(id){let c=state.cards.find(x=>String(x.id)===String(id));if(!c)return;if(confirm(`Удалить карточку «${c.ti} — ${c.ru}»?`)){state.cards=state.cards.filter(x=>String(x.id)!==String(id));save();renderEdit()}}
-function csvEscape(v){return '"'+String(v??"").replace(/"/g,'""')+'"'} function exportCSV(){let rows=[["tibetan","tibetan_note","russian"]];state.cards.forEach(c=>rows.push([c.ti,c.note||"",c.ru]));let b=new Blob(["\uFEFF"+rows.map(r=>r.map(csvEscape).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="tibetan_quiz_cards.csv";a.click();URL.revokeObjectURL(u)}
-function parseCSV(t){t=t.replace(/^\uFEFF/,"");let R=[],r=[],f="",q=false;for(let i=0;i<t.length;i++){let c=t[i],n=t[i+1];if(q){if(c=='"'&&n=='"'){f+='"';i++}else if(c=='"')q=false;else f+=c}else if(c=='"')q=true;else if(c==','){r.push(f);f=""}else if(c=='\n'){r.push(f);R.push(r);r=[];f=""}else if(c!='\r')f+=c}if(f||r.length){r.push(f);R.push(r)}return R}
+function csvEscape(v){return '"'+String(v??"").replace(/"/g,'""')+'"'}
+function exportCSV(){let rows=[["tibetan","tibetan_note","russian"]];state.cards.forEach(c=>rows.push([c.ti,c.note||"",c.ru]));let b=new Blob(["\uFEFF"+rows.map(r=>r.map(csvEscape).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="tibetan_quiz_cards.csv";a.click();URL.revokeObjectURL(u)}
+function detectCSVDelimiter(t){
+  t=t.replace(/^\uFEFF/,"");
+  let line="",q=false;
+  for(let i=0;i<t.length;i++){
+    const c=t[i],n=t[i+1];
+    if(c==='"'){
+      if(q&&n==='"'){i++;continue}
+      q=!q;
+    }
+    if((c==='\n'||c==='\r')&&!q)break;
+    line+=c;
+  }
+  let commas=0,semis=0;q=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i],n=line[i+1];
+    if(c==='"'){
+      if(q&&n==='"'){i++;continue}
+      q=!q;
+    }else if(!q&&c===',')commas++;
+    else if(!q&&c===';')semis++;
+  }
+  return semis>commas?';':',';
+}
+function parseCSV(t,delimiter){
+  t=t.replace(/^\uFEFF/,"");
+  let rows=[],row=[],field="",quoted=false;
+  for(let i=0;i<t.length;i++){
+    const c=t[i],n=t[i+1];
+    if(quoted){
+      if(c==='"'&&n==='"'){field+='"';i++}
+      else if(c==='"')quoted=false;
+      else field+=c;
+    }else if(c==='"')quoted=true;
+    else if(c===delimiter){row.push(field);field=""}
+    else if(c==='\n'){row.push(field);rows.push(row);row=[];field=""}
+    else if(c!=='\r')field+=c;
+  }
+  if(field!==""||row.length){row.push(field);rows.push(row)}
+  return rows.filter(r=>r.some(v=>String(v).trim()!==""));
+}
 function importCSV(e){
   const file=e.target.files&&e.target.files[0]; if(!file)return;
   const reader=new FileReader();
   reader.onload=()=>{
     try{
-      const lines=reader.result.replace(/^\\uFEFF/,"").split(/\\r?\\n/).filter(x=>x.trim());
-      if(!lines.length)throw new Error("Пустой CSV");
-      const parse=line=>{const a=[];let s="",q=false;for(let i=0;i<line.length;i++){let c=line[i];if(c==='"'){if(q&&line[i+1]==='"'){s+='"';i++}else q=!q}else if(c===","&&!q){a.push(s);s=""}else s+=c}a.push(s);return a.map(x=>x.trim())};
-      const rows=lines.map(parse), h=rows[0].map(x=>x.toLowerCase());
-      let ti=h.indexOf("tibetan"), note=h.indexOf("tibetan_note"), ru=h.indexOf("russian"); if(ti<0||ru<0){ti=0;note=-1;ru=1}
-      const existing=new Set(state.cards.map(c=>(`${c.ti||""}\\u0000${c.ru||""}`).toLowerCase().trim()));
-      let added=0, skipped=0;
+      const text=String(reader.result||"");
+      const delimiter=detectCSVDelimiter(text);
+      const rows=parseCSV(text,delimiter);
+      if(!rows.length)throw new Error("Пустой CSV");
+      const h=rows[0].map(x=>String(x).trim().toLowerCase());
+      let ti=h.indexOf("tibetan"),note=h.indexOf("tibetan_note"),ru=h.indexOf("russian");
+      if(ti<0||ru<0)throw new Error("Не найдены колонки tibetan и russian");
+      const existing=new Set(state.cards.map(c=>(String(c.ti||"").trim()+"\u0000"+String(c.ru||"").trim()).toLowerCase()));
+      let added=0,skipped=0,errors=0;
       rows.slice(1).forEach(r=>{
-        const t=(r[ti]||"").trim(), n=note>=0?(r[note]||"").trim():"", v=(r[ru]||"").trim(); if(!t&&!v)return;
-        const key=(`${t}\\u0000${v}`).toLowerCase().trim();
-        if(existing.has(key)) skipped++;
-        else {state.cards.push(ensure({id:Date.now()+Math.random(),ti:t,note:n,ru:v,status:"new"}));existing.add(key);added++}
+        const t=String(r[ti]??"").trim();
+        const n=note>=0?String(r[note]??"").trim():"";
+        const v=String(r[ru]??"").trim();
+        if(!t&&!v)return;
+        if(!t||!v){errors++;return}
+        const key=(t+"\u0000"+v).toLowerCase();
+        if(existing.has(key)){skipped++;return}
+        state.cards.push(ensure({id:Date.now().toString()+"-"+Math.random().toString(36).slice(2),ti:t,note:n,ru:v,status:"new"}));
+        existing.add(key);added++;
       });
-      save(); renderEdit();
-      alert(`Импорт завершён.\\nДобавлено: ${added}\\nДубликатов пропущено: ${skipped}`);
+      save();renderEdit();
+      alert(`Импорт завершён.\nДобавлено: ${added}\nДубликатов пропущено: ${skipped}\nОшибочных строк: ${errors}\nРазделитель: ${delimiter===","?"запятая (,)":"точка с запятой (;)"}`);
     }catch(err){alert("Не удалось импортировать CSV: "+err.message)}
     e.target.value="";
   };
@@ -251,7 +298,7 @@ function renderSettings(){content.innerHTML=`<div class="panel settings">
 <div class="setting"><b>Дневная цель: <span id="goalVal">${state.dailyGoal}</span></b><input class="range" type="range" min="5" max="100" value="${state.dailyGoal}" oninput="state.dailyGoal=+this.value;document.getElementById('goalVal').textContent=this.value;save()"></div>
 <div class="setting">
   <b>CSV — импорт и экспорт</b>
-  <div class="tiny" style="margin:8px 0 12px">Формат: tibetan, tibetan_note, russian. При импорте существующие карточки сохраняются, а точные дубликаты «тибетское слово + русский перевод» пропускаются.</div>
+  <div class="tiny" style="margin:8px 0 12px">Формат: tibetan, tibetan_note, russian. Поддерживаются разделители запятая (,) и точка с запятой (;). При импорте существующие карточки сохраняются, а точные дубликаты «тибетское слово + русский перевод» пропускаются.</div>
   <div style="display:flex;gap:10px;flex-wrap:wrap">
     <button class="btn primary" type="button" onclick="exportCSV()">⬇️ Экспорт CSV</button>
     <label class="btn" style="display:inline-block;cursor:pointer">⬆️ Импорт CSV<input type="file" accept=".csv,text/csv" onchange="importCSV(event)" style="display:none"></label>
