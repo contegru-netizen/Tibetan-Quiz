@@ -200,6 +200,14 @@ function renderSettings(){content.innerHTML=`<div class="panel settings">
 <div class="setting"><b>Русский: <span id="ruVal">${state.ruSize}</span> px</b><input class="range" type="range" min="18" max="60" value="${state.ruSize}" oninput="state.ruSize=+this.value;document.getElementById('ruVal').textContent=this.value;css();save()"></div>
 <div class="setting"><b>Дневная цель: <span id="goalVal">${state.dailyGoal}</span></b><input class="range" type="range" min="5" max="100" value="${state.dailyGoal}" oninput="state.dailyGoal=+this.value;document.getElementById('goalVal').textContent=this.value;save()"></div>
 <div class="setting">
+  <b>CSV — импорт и экспорт</b>
+  <div class="tiny" style="margin:8px 0 12px">Формат: tibetan, tibetan_note, russian. При импорте существующие карточки сохраняются, а точные дубликаты «тибетское слово + русский перевод» пропускаются.</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <button class="btn primary" type="button" onclick="exportCSV()">⬇️ Экспорт CSV</button>
+    <label class="btn" style="display:inline-block;cursor:pointer">⬆️ Импорт CSV<input type="file" accept=".csv,text/csv" onchange="importCSV(event)" style="display:none"></label>
+  </div>
+</div>
+<div class="setting">
   <b>Резервная копия</b>
   <div class="tiny" style="margin:8px 0 12px">Сохраните карточки, прогресс и настройки в JSON-файл. На iPhone выберите «Сохранить в Файлы» → iCloud Drive.</div>
   <button class="btn primary" type="button" onclick="createBackup()">💾 Создать backup</button>
