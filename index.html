@@ -194,7 +194,22 @@ function importCSV(e){
 }
 function createBackup(){let b={app:"Tibetan Quiz",version:2,createdAt:new Date().toISOString(),cards:state.cards,settings:{tiSize:state.tiSize,ruSize:state.ruSize},dailyGoal:state.dailyGoal},u=URL.createObjectURL(new Blob([JSON.stringify(b,null,2)],{type:"application/json"})),a=document.createElement("a");a.href=u;a.download="tibetan_quiz_backup_"+today()+".json";a.click();URL.revokeObjectURL(u)}
 function restoreBackup(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let b=JSON.parse(r.result);if(b.app!=="Tibetan Quiz"||!Array.isArray(b.cards))throw Error("Это не backup Tibetan Quiz");if(!confirm("Восстановить "+b.cards.length+" карточек?"))return;state.cards=b.cards.map(ensure);if(b.settings){state.tiSize=Number(b.settings.tiSize)||78;state.ruSize=Number(b.settings.ruSize)||28}if(b.dailyGoal)state.dailyGoal=Number(b.dailyGoal);state.index=0;state.shown=false;save();render();alert("Backup восстановлен")}catch(x){alert("Ошибка восстановления: "+x.message)}finally{e.target.value=""}};r.readAsText(f,"UTF-8")}
-function renderSettings(){content.innerHTML=`<div class="panel settings"><h2>Настройки</h2><div class="setting"><b>Тибетский: <span id="tiVal">${state.tiSize}</span> px</b><input class="range" type="range" min="36" max="120" value="${state.tiSize}" oninput="state.tiSize=+this.value;tiVal.textContent=this.value;css();save()"></div><div class="setting"><b>Русский: <span id="ruVal">${state.ruSize}</span> px</b><input class="range" type="range" min="18" max="60" value="${state.ruSize}" oninput="state.ruSize=+this.value;ruVal.textContent=this.value;css();save()"></div><div class="setting"><b>Дневная цель: <span id="goalVal">${state.dailyGoal}</span></b><input class="range" type="range" min="5" max="100" value="${state.dailyGoal}" oninput="state.dailyGoal=+this.value;goalVal.textContent=this.value;save()"></div></div>`}
+function renderSettings(){content.innerHTML=`<div class="panel settings">
+<h2>Настройки</h2>
+<div class="setting"><b>Тибетский: <span id="tiVal">${state.tiSize}</span> px</b><input class="range" type="range" min="36" max="120" value="${state.tiSize}" oninput="state.tiSize=+this.value;document.getElementById('tiVal').textContent=this.value;css();save()"></div>
+<div class="setting"><b>Русский: <span id="ruVal">${state.ruSize}</span> px</b><input class="range" type="range" min="18" max="60" value="${state.ruSize}" oninput="state.ruSize=+this.value;document.getElementById('ruVal').textContent=this.value;css();save()"></div>
+<div class="setting"><b>Дневная цель: <span id="goalVal">${state.dailyGoal}</span></b><input class="range" type="range" min="5" max="100" value="${state.dailyGoal}" oninput="state.dailyGoal=+this.value;document.getElementById('goalVal').textContent=this.value;save()"></div>
+<div class="setting">
+  <b>Резервная копия</b>
+  <div class="tiny" style="margin:8px 0 12px">Сохраните карточки, прогресс и настройки в JSON-файл. На iPhone выберите «Сохранить в Файлы» → iCloud Drive.</div>
+  <button class="btn primary" type="button" onclick="createBackup()">💾 Создать backup</button>
+</div>
+<div class="setting">
+  <b>Восстановление</b>
+  <div class="tiny" style="margin:8px 0 12px">Выберите ранее сохранённый JSON-файл Tibetan Quiz.</div>
+  <label class="btn" style="display:inline-block;cursor:pointer">📂 Восстановить из backup<input type="file" accept=".json,application/json" onchange="restoreBackup(event)" style="display:none"></label>
+</div>
+</div>`}
 document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));settingsBtn.onclick=()=>{state.mode="settings";render()};fullBtn.onclick=()=>{document.documentElement.classList.toggle("fullscreen");fullBtn.textContent=document.documentElement.classList.contains("fullscreen")?"✕":"⛶"};document.addEventListener("keydown",e=>{
  const tag=(e.target&&e.target.tagName||"").toLowerCase();
  if(tag==="input"||tag==="textarea"||tag==="select"||e.target?.isContentEditable)return;
