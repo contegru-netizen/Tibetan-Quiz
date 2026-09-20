@@ -50,6 +50,19 @@ function ensure(c){c.status=c.status||"new";c.direction=c.direction||{tiRu:{stre
 function css(){document.documentElement.style.setProperty("--ti",state.tiSize+"px");document.documentElement.style.setProperty("--ru",state.ruSize+"px")} function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
 function due(c,d){return !c.direction[d].due||c.direction[d].due<=today()} function addDays(n){let d=new Date(today()+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
 function rank(c){return c.status==="new"?0:c.status==="dont"?1:c.status==="maybe"?2:3}
+function statusLabel(s){
+ if(s==="know")return "Знаю";
+ if(s==="maybe")return "Сомневаюсь";
+ if(s==="dont")return "Не знаю";
+ return "Новое";
+}
+function statusClass(s){
+ if(s==="know")return "know";
+ if(s==="maybe")return "maybe";
+ if(s==="dont")return "dont";
+ return "";
+}
+
 function arr(){let a=state.cards.filter(c=>{if(state.mode==="new")return c.status==="new"||c.status==="dont";if(state.mode==="maybe")return c.status==="maybe"&&(due(c,"tiRu")||due(c,"ruTi"));if(state.mode==="know")return c.status==="know"&&(due(c,"tiRu")||due(c,"ruTi"));if(state.mode==="ti")return due(c,"tiRu");if(state.mode==="ru")return due(c,"ruTi");return due(c,"tiRu")||due(c,"ruTi")});return a.sort((a,b)=>rank(a)-rank(b))}
 function dir(c){if(state.mode==="ti")return"tiRu";if(state.mode==="ru")return"ruTi";let a=c.direction.tiRu,b=c.direction.ruTi;if(!a.due&&!b.due)return state.index%2?"ruTi":"tiRu";if(!a.due)return"tiRu";if(!b.due)return"ruTi";return a.due<=b.due?"tiRu":"ruTi"}
 function render(){css();document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.mode));if(state.mode==="edit")return renderEdit();if(state.mode==="settings")return renderSettings();if(state.mode==="home")return renderHome();let a=arr();if(!a.length){content.innerHTML='<div class="panel empty">Сейчас нет карточек для этого режима.<br><br><button class="btn primary" onclick="setMode(\'smart\')">Умное повторение</button></div>';return}if(state.index>=a.length)state.index=0;let c=a[state.index],d=dir(c),prompt=d==="tiRu"?c.ti:c.ru,answer=d==="tiRu"?c.ru:c.ti,noteHtml=(c.note&&d==="tiRu")?`<div class="ti-note">${esc(c.note)}</div>`:"";content.innerHTML=`<div class="panel quiz"><div class="count">${state.mode==="smart"?"🧠 Умное повторение":state.mode==="new"?"🔴 Учить новые":state.mode==="maybe"?"🟡 Закреплять":state.mode==="know"?"🟢 Поддерживать":d==="tiRu"?"Тибетский → Русский":"Русский → Тибетский"} · ${state.index+1}/${a.length}</div><div class="prompt">${esc(prompt)}</div>${noteHtml}<div class="answer ${state.shown?"":"hidden"}">${esc(answer)}</div><div class="actions">${state.shown?'<button class="btn dont" onclick="rate(\'dont\')">🔴 Не знаю</button><button class="btn maybe" onclick="rate(\'maybe\')">🟡 Сомневаюсь</button><button class="btn know" onclick="rate(\'know\')">🟢 Знаю</button>':'<button class="btn primary" onclick="showAns()">Показать ответ</button>'}</div><div class="actions"><button class="btn" onclick="prev()">←</button><button class="btn" onclick="next()">Следующая →</button></div></div><div class="bottom"><span>Статус: <b>${c.status||"new"}</b></span><button class="btn" onclick="renderEdit()">✏️ Карточки</button></div>`}
@@ -64,44 +77,50 @@ function renderEdit(){
      <button class="btn primary" type="button" onclick="showAddCard()">＋ Добавить карточку</button>
    </div>
    <div class="search" style="margin-top:14px">
-     <input id="searchBox" placeholder="Поиск по тибетскому, комментарию или русскому" oninput="fillWordList()">
+     <input id="searchBox" type="search" placeholder="Поиск по тибетскому, комментарию или русскому">
    </div>
    <div id="wordListInfo" class="tiny" style="margin:8px 0 12px"></div>
-   <div id="list"></div>
+   <div id="wordList"></div>
  </div>`;
- fillWordList();
+ const search=document.getElementById("searchBox");
+ search.addEventListener("input",renderWordList);
+ renderWordList();
 }
-function fillWordList(){
- const listEl=document.getElementById("list");
- if(!listEl)return;
- const searchEl=document.getElementById("searchBox");
- const q=(searchEl?searchEl.value:"").trim().toLowerCase();
- const filtered=state.cards.filter(c=>{
-   const hay=(String(c.ti||"")+" "+String(c.note||"")+" "+String(c.ru||"")).toLowerCase();
-   return !q||hay.includes(q);
- });
+function renderWordList(){
+ const box=document.getElementById("wordList");
  const info=document.getElementById("wordListInfo");
- if(info)info.textContent=`Всего слов: ${state.cards.length}. Показано: ${filtered.length}.`;
- if(!filtered.length){
-   listEl.innerHTML=`<div class="empty">${state.cards.length?"По вашему запросу ничего не найдено.":"Пока нет внесённых слов."}</div>`;
+ const search=document.getElementById("searchBox");
+ if(!box)return;
+ const q=(search?.value||"").trim().toLocaleLowerCase();
+ const cards=state.cards.filter(c=>{
+   const text=[c.ti,c.note,c.ru].filter(Boolean).join(" ").toLocaleLowerCase();
+   return q==="" || text.includes(q);
+ });
+ if(info)info.textContent=`Всего слов: ${state.cards.length}. Показано: ${cards.length}.`;
+ if(cards.length===0){
+   box.innerHTML=`<div class="empty">${q?"Ничего не найдено.":"Пока нет внесённых слов."}</div>`;
    return;
  }
- listEl.innerHTML=filtered.map(c=>`
-   <div class="row">
-     <div style="min-width:0;flex:1">
-       <div class="ti">${esc(c.ti||"")}</div>
-       ${c.note?`<div class="ti-note">${esc(c.note)}</div>`:""}
-       <div class="ru">${esc(c.ru||"")}</div>
-       <span class="badge ${statusClass(c.status)}">${statusLabel(c.status)}</span>
-     </div>
-     <div class="row-actions">
-       <button class="btn" type="button" onclick="editCardById(${JSON.stringify(String(c.id))})">✏️ Редактировать</button>
-       <button class="btn danger" type="button" onclick="deleteCardById(${JSON.stringify(String(c.id))})">🗑 Удалить</button>
-     </div>
-   </div>`).join("");
+ box.innerHTML="";
+ cards.forEach(c=>{
+   const row=document.createElement("div");
+   row.className="row";
+   const left=document.createElement("div");
+   left.style.cssText="min-width:0;flex:1";
+   left.innerHTML=`<div class="ti">${esc(c.ti||"")}</div>${c.note?`<div class="ti-note">${esc(c.note)}</div>`:""}<div class="ru">${esc(c.ru||"")}</div>`;
+   const actions=document.createElement("div");
+   actions.className="row-actions";
+   const edit=document.createElement("button");
+   edit.type="button"; edit.className="btn"; edit.textContent="✏️ Редактировать";
+   edit.addEventListener("click",()=>editCard(String(c.id)));
+   const del=document.createElement("button");
+   del.type="button"; del.className="btn danger"; del.textContent="🗑 Удалить";
+   del.addEventListener("click",()=>deleteCard(String(c.id)));
+   actions.append(edit,del);
+   row.append(left,actions);
+   box.appendChild(row);
+ });
 }
-function editCardById(id){editCard(id)}
-function deleteCardById(id){deleteCard(id)}
 function showAddCard(){
  content.innerHTML=`<div class="panel addbox">
  <h2>＋ Новая карточка</h2>
@@ -187,9 +206,16 @@ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>setMode(b.datas
 </script>
 
 <script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js"));
-}
+window.addEventListener("load", async () => {
+  if ("serviceWorker" in navigator) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    for (const r of regs) await r.unregister();
+  }
+  if ("caches" in window) {
+    const keys = await caches.keys();
+    for (const k of keys) await caches.delete(k);
+  }
+});
 </script>
 
 
