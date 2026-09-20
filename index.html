@@ -72,12 +72,13 @@ function renderEdit(){
 function showAddCard(){
  content.innerHTML=`<div class="panel addbox">
  <h2>＋ Новая карточка</h2>
- <form class="form" action="javascript:void(0)" onsubmit="return addCard(event)">
+ <div class="form" id="addCardForm">
  <input id="newTi" placeholder="Тибетское слово" autocomplete="off" required>
 <input id="newNote" placeholder="Комментарий / произношение (необязательно)">
  <textarea id="newRu" placeholder="Русский перевод" required></textarea>
- <button class="btn primary" type="submit">Сохранить карточку</button>
- </form>
+ <button class="btn primary" type="button" onclick="addCard()">Сохранить карточку</button>
+ <div id="saveMessage" class="tiny" style="margin-top:10px"></div>
+ </div>
  <div class="actions"><button class="btn" onclick="renderEdit()">Отмена</button></div>
  </div>`;
  setTimeout(()=>document.getElementById("newTi")?.focus(),50);
@@ -91,18 +92,26 @@ function renderCardList(){
  hint.textContent=q?`Найдено: ${filtered.length} из ${state.cards.length}`:`Всего карточек: ${state.cards.length}`;
  if(!filtered.length)list.innerHTML='<div class="empty">Ничего не найдено.</div>';
 }
-function addCard(e){
- e.preventDefault();
+function addCard(){
  const tiEl=document.getElementById("newTi");
  const noteEl=document.getElementById("newNote");
  const ruEl=document.getElementById("newRu");
- if(!tiEl||!ruEl)return false;
- const ti=tiEl.value.trim(), note=noteEl?noteEl.value.trim():"", ru=ruEl.value.trim();
- if(!ti||!ru)return false;
- state.cards.push(ensure({id:Date.now(),ti:ti,note:note,ru:ru,status:"new"}));
+ const msg=document.getElementById("saveMessage");
+ if(!tiEl||!ruEl)return;
+ const ti=tiEl.value.trim();
+ const note=noteEl?noteEl.value.trim():"";
+ const ru=ruEl.value.trim();
+ if(!ti||!ru){
+   if(msg)msg.textContent="Заполните тибетское слово и русский перевод.";
+   return;
+ }
+ state.cards.push(ensure({id:Date.now().toString()+"-"+Math.random().toString(36).slice(2),ti:ti,note:note,ru:ru,status:"new"}));
  save();
- renderEdit();
- return false;
+ tiEl.value="";
+ if(noteEl)noteEl.value="";
+ ruEl.value="";
+ if(msg)msg.textContent="✓ Карточка сохранена. Можно сразу добавить следующую.";
+ tiEl.focus();
 } function editCard(id){let c=state.cards.find(x=>x.id===id);if(!c)return;let ti=prompt("Тибетское слово:",c.ti);if(ti===null)return;let note=prompt("Комментарий / произношение:",c.note||"");if(note===null)return;let ru=prompt("Русский перевод:",c.ru);if(ru===null)return;c.ti=ti.trim();c.note=note.trim();c.ru=ru.trim();save();renderEdit()} function deleteCard(id){let c=state.cards.find(x=>x.id===id);if(!c)return;if(confirm(`Удалить карточку «${c.ti} — ${c.ru}»?`)){state.cards=state.cards.filter(x=>x.id!==id);save();renderEdit()}}
 function csvEscape(v){return '"'+String(v??"").replace(/"/g,'""')+'"'} function exportCSV(){let rows=[["tibetan","tibetan_note","russian"]];state.cards.forEach(c=>rows.push([c.ti,c.note||"",c.ru]));let b=new Blob(["\uFEFF"+rows.map(r=>r.map(csvEscape).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="tibetan_quiz_cards.csv";a.click();URL.revokeObjectURL(u)}
 function parseCSV(t){t=t.replace(/^\uFEFF/,"");let R=[],r=[],f="",q=false;for(let i=0;i<t.length;i++){let c=t[i],n=t[i+1];if(q){if(c=='"'&&n=='"'){f+='"';i++}else if(c=='"')q=false;else f+=c}else if(c=='"')q=true;else if(c==','){r.push(f);f=""}else if(c=='\n'){r.push(f);R.push(r);r=[];f=""}else if(c!='\r')f+=c}if(f||r.length){r.push(f);R.push(r)}return R}
