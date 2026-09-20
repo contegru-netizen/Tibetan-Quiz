@@ -27,15 +27,7 @@ nav{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:16px}
 .fullscreen .app{max-width:none}.fullscreen header,.fullscreen nav,.fullscreen .bottom{display:none}.fullscreen .panel{border:0;box-shadow:none;min-height:calc(100dvh - 30px);border-radius:0}.fullscreen{background:var(--bg)}
 .empty{text-align:center;color:var(--muted);padding:45px 15px}.count{color:var(--muted);font-size:14px;margin-bottom:8px}
 @media(max-width:480px){.panel{padding:17px}.quiz{min-height:62dvh}.prompt{font-size:var(--ti)}nav button{font-size:13px}}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:23px}.stat span{font-size:12px;color:var(--muted)}.dashboard{display:grid;gap:12px}.modecard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}.modecard h3{margin:0 0 5px}.modecard p{margin:0;color:var(--muted);font-size:14px}.modecard button{margin-top:12px;width:100%}.progress{height:9px;background:#e7e8eb;border-radius:20px;overflow:hidden;margin:9px 0 4px}.progress>div{height:100%;background:var(--accent)}.tiny{font-size:13px;color:var(--muted)}.badge{display:inline-block;padding:4px 8px;border-radius:9px;font-size:12px;background:#eef0f3;color:#4b5563}.ti-note{font-size:0.95em;font-style:italic;opacity:.75;margin-top:4px;margin-bottom:6px}</style>
-
-<style>
-.ru-text{font-size:clamp(28px,7vw,46px)!important;line-height:1.2!important}
-.ti-text{font-size:var(--ti-size,78px)!important;line-height:1.35!important}
-.ti-answer{font-size:var(--ti-size,78px)!important;line-height:1.35!important}
-.ru-answer{font-size:var(--ru-size,28px)!important;line-height:1.3!important}
-</style>
-
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:23px}.stat span{font-size:12px;color:var(--muted)}.dashboard{display:grid;gap:12px}.modecard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}.modecard h3{margin:0 0 5px}.modecard p{margin:0;color:var(--muted);font-size:14px}.modecard button{margin-top:12px;width:100%}.progress{height:9px;background:#e7e8eb;border-radius:20px;overflow:hidden;margin:9px 0 4px}.progress>div{height:100%;background:var(--accent)}.tiny{font-size:13px;color:var(--muted)}.badge{display:inline-block;padding:4px 8px;border-radius:9px;font-size:12px;background:#eef0f3;color:#4b5563}.ti-note{font-size:0.95em;font-style:italic;opacity:.75;margin-top:4px;margin-bottom:6px}.prompt.russian-side{font-size:var(--ru)!important}.prompt.tibetan-side{font-size:var(--ti)!important}.answer.russian-side{font-size:var(--ru)!important}.answer.tibetan-side{font-size:var(--ti)!important}</style>
 </head>
 <body>
 <div class="app">
@@ -53,6 +45,7 @@ nav{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:16px}
 const KEY="tibetanQuiz.v2";
 const old=JSON.parse(localStorage.getItem("tibetanQuiz.v1")||"null");
 let state=JSON.parse(localStorage.getItem(KEY)||"null")||{cards:old?.cards||[],tiSize:old?.tiSize||78,ruSize:old?.ruSize||28,mode:"smart",index:0,shown:false,dailyGoal:20,session:{date:"",done:0,correct:0}};
+let testDirection="ruTi"; let randomDirections={};
 function save(){localStorage.setItem(KEY,JSON.stringify(state))} function today(){return new Date().toISOString().slice(0,10)}
 function ensure(c){c.status=c.status||"new";c.direction=c.direction||{tiRu:{streak:0,interval:0,due:null},ruTi:{streak:0,interval:0,due:null}};return c} state.cards.forEach(ensure); if(state.session.date!==today())state.session={date:today(),done:0,correct:0};
 function css(){document.documentElement.style.setProperty("--ti",state.tiSize+"px");document.documentElement.style.setProperty("--ru",state.ruSize+"px")} function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
@@ -71,42 +64,61 @@ function statusClass(s){
  return "";
 }
 
-function arr(){let a=state.cards.filter(c=>{if(state.mode==="new")return c.status==="new"||c.status==="dont";if(state.mode==="maybe")return c.status==="maybe"&&(due(c,"tiRu")||due(c,"ruTi"));if(state.mode==="know")return c.status==="know"&&(due(c,"tiRu")||due(c,"ruTi"));if(state.mode==="ti")return due(c,"tiRu");if(state.mode==="ru")return due(c,"ruTi");return due(c,"tiRu")||due(c,"ruTi")});return a.sort((a,b)=>rank(a)-rank(b))}
-function dir(c){if(state.mode==="ti")return"tiRu";if(state.mode==="ru")return"ruTi";let a=c.direction.tiRu,b=c.direction.ruTi;if(!a.due&&!b.due)return state.index%2?"ruTi":"tiRu";if(!a.due)return"tiRu";if(!b.due)return"ruTi";return a.due<=b.due?"tiRu":"ruTi"}
-
-let sessionDirection="ruTi";
-let sessionOrder=[];
-function startModePicker(mode){
- state.mode=mode;
- save();
- const labels={smart:"🧠 Умное",new:"🔴 Новые",maybe:"🟡 Закрепить",know:"🟢 Поддерживать"};
- content.innerHTML=`<div class="panel"><h2>${labels[mode]||"Тестирование"}</h2>
- <div class="tiny" style="margin-bottom:16px">Выберите направление тестирования:</div>
- <div style="display:grid;gap:12px">
-   <button class="btn primary" type="button" onclick="beginTraining('ruTi')">Русский → тибетский</button>
-   <button class="btn" type="button" onclick="beginTraining('tiRu')">Тибетский → русский</button>
-   <button class="btn" type="button" onclick="beginTraining('random')">🔀 Рандомное изменение языка</button>
- </div></div>`;
-}
-function beginTraining(direction){
- sessionDirection=direction;
- state.index=0;
- state.show=false;
- // Build a fresh session every launch. Smart defaults to Russian first only if direction was not explicitly chosen.
- sessionOrder=activeCards().slice();
- // Fisher-Yates shuffle cards, while direction is handled independently.
- for(let i=sessionOrder.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[sessionOrder[i],sessionOrder[j]]=[sessionOrder[j],sessionOrder[i]]}
- render();
+function arr(){
+ let a=state.cards.filter(c=>{
+   if(state.mode==="new")return c.status==="new"||c.status==="dont";
+   if(state.mode==="maybe")return c.status==="maybe";
+   if(state.mode==="know")return c.status==="know";
+   return true;
+ });
+ return a.sort((a,b)=>rank(a)-rank(b));
 }
 function dir(c){
- if(sessionDirection==="random") return Math.random()<0.5?"ruTi":"tiRu";
- return sessionDirection;
+ if(testDirection==="tiRu")return "tiRu";
+ if(testDirection==="ruTi")return "ruTi";
+ const key=String(c.id)+"-"+state.index;
+ if(!randomDirections[key])randomDirections[key]=Math.random()<0.5?"ruTi":"tiRu";
+ return randomDirections[key];
 }
-
-function render(){css();document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.mode));if(state.mode==="edit")return renderEdit();if(state.mode==="settings")return renderSettings();if(state.mode==="home")return renderHome();let a=arr();if(!a.length){content.innerHTML='<div class="panel empty">Сейчас нет карточек для этого режима.<br><br><button class="btn primary" onclick="setMode(\'smart\')">Умное повторение</button></div>';return}if(state.index>=a.length)state.index=0;let c=a[state.index],d=dir(c),prompt=d==="tiRu"?c.ti:c.ru,answer=d==="tiRu"?c.ru:c.ti,noteHtml=(c.note&&d==="tiRu")?`<div class="ti-note">${esc(c.note)}</div>`:"";content.innerHTML=`<div class="panel quiz"><div class="count">${state.mode==="smart"?"🧠 Умное повторение":state.mode==="new"?"🔴 Учить новые":state.mode==="maybe"?"🟡 Закреплять":state.mode==="know"?"🟢 Поддерживать":d==="tiRu"?"Тибетский → Русский":"Русский → Тибетский"} · ${state.index+1}/${a.length}</div><div class="prompt ${d===\"tiRu\"?\"ti-text\":\"ru-text\"}">${esc(prompt)}</div>${noteHtml}<div class="answer ${d===\"tiRu\"?\"ru-answer\":\"ti-answer\"} ${state.shown?"":"hidden"}">${esc(answer)}</div><div class="actions">${state.shown?'<button class="btn dont" onclick="rate(\'dont\')">🔴 Не знаю</button><button class="btn maybe" onclick="rate(\'maybe\')">🟡 Сомневаюсь</button><button class="btn know" onclick="rate(\'know\')">🟢 Знаю</button>':'<button class="btn primary" onclick="showAns()">Показать ответ</button>'}</div><div class="actions"><button class="btn" onclick="prev()">←</button><button class="btn" onclick="next()">Следующая →</button></div></div><div class="bottom"><span>Статус: <b>${c.status||"new"}</b></span><button class="btn" onclick="renderEdit()">✏️ Карточки</button></div>`}
-function setMode(m){state.mode=m;state.index=0;state.shown=false;render()} function showAns(){state.shown=true;render()} function next(){let n=arr().length;if(n){state.index=(state.index+1)%n;state.shown=false;render()}} function prev(){let n=arr().length;if(n){state.index=(state.index-1+n)%n;state.shown=false;render()}}
-function rate(x){let a=arr();if(!a.length)return;let c=a[state.index],d=dir(c),q=c.direction[d];if(x==="dont"){c.status="dont";q.streak=0;q.interval=0;q.due=today()}else if(x==="maybe"){c.status="maybe";q.streak=(q.streak||0)+1;q.interval=1;q.due=addDays(1)}else{c.status="know";q.streak=(q.streak||0)+1;let seq=[1,3,7,14,30,60,120,240];q.interval=seq[Math.min(q.streak-1,seq.length-1)];q.due=addDays(q.interval)}c.lastReview=today();state.session.done++;if(x==="know")state.session.correct++;save();state.index=0;state.shown=false;render()}
-function renderHome(){let n={new:state.cards.filter(c=>c.status==="new").length,dont:state.cards.filter(c=>c.status==="dont").length,maybe:state.cards.filter(c=>c.status==="maybe").length,know:state.cards.filter(c=>c.status==="know").length},pct=Math.min(100,state.session.done/state.dailyGoal*100);content.innerHTML=`<div class="stats"><div class="stat"><b>${n.new+n.dont}</b><span>🔴 Активно</span></div><div class="stat"><b>${n.maybe}</b><span>🟡 Сомневаюсь</span></div><div class="stat"><b>${n.know}</b><span>🟢 Знаю</span></div></div><div class="panel dashboard"><h2>Сегодня</h2><div class="progress"><div style="width:${pct}%"></div></div><div class="tiny">${state.session.done}/${state.dailyGoal} карточек · ${state.session.correct} «Знаю»</div><div class="modecard"><h3>🧠 Умное повторение</h3><p>Само выбирает новые, слабые и созревшие для повторения слова.</p><button class="btn primary" onclick="startModePicker('smart')">Начать</button></div><div class="modecard"><h3>🔴 Учить новые</h3><p>${n.new+n.dont} карточек требуют активного обучения.</p><button class="btn" onclick="startModePicker('new')">Учить</button></div><div class="modecard"><h3>🟡 Закреплять</h3><p>${n.maybe} карточек с сомнением.</p><button class="btn" onclick="startModePicker('maybe')">Закреплять</button></div><div class="modecard"><h3>🟢 Поддерживать</h3><p>${n.know} выученных карточек проверяются редко, но регулярно.</p><button class="btn" onclick="startModePicker('know')">Повторять</button></div></div>`}
+function render(){
+ css();
+ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.mode));
+ if(state.mode==="edit")return renderEdit();
+ if(state.mode==="settings")return renderSettings();
+ if(state.mode==="home")return renderHome();
+ let a=arr();
+ if(!a.length){
+   content.innerHTML='<div class="panel empty">В этой категории пока нет карточек.<br><br><button class="btn primary" onclick="setMode(\'home\')">На главную</button></div>';
+   return;
+ }
+ if(state.index>=a.length)state.index=0;
+ let c=a[state.index],d=dir(c),prompt=d==="tiRu"?c.ti:c.ru,answer=d==="tiRu"?c.ru:c.ti;
+ let noteHtml=(c.note&&d==="tiRu")?`<div class="ti-note">${esc(c.note)}</div>`:"";
+ let promptClass=d==="tiRu"?"tibetan-side":"russian-side";
+ let answerClass=d==="tiRu"?"russian-side":"tibetan-side";
+ content.innerHTML=`<div class="panel quiz">
+ <div class="count">${state.mode==="smart"?"🧠 Умное повторение":state.mode==="new"?"🔴 Учить новые":state.mode==="maybe"?"🟡 Закреплять":"🟢 Поддерживать"} · ${state.index+1}/${a.length}</div>
+ <div class="prompt ${promptClass}">${esc(prompt)}</div>${noteHtml}
+ <div class="answer ${answerClass} ${state.shown?"":"hidden"}">${esc(answer)}</div>
+ <div class="actions">${state.shown?'<button class="btn dont" onclick="rate(\'dont\')">🔴 Не знаю</button><button class="btn maybe" onclick="rate(\'maybe\')">🟡 Сомневаюсь</button><button class="btn know" onclick="rate(\'know\')">🟢 Знаю</button>':'<button class="btn primary" onclick="showAns()">Показать ответ</button>'}</div>
+ <div class="actions"><button class="btn" onclick="prev()">←</button><button class="btn" onclick="next()">Следующая →</button></div>
+ </div><div class="bottom"><span>Статус: <b>${c.status||"new"}</b></span><button class="btn" onclick="setMode('edit')">✏️ Карточки</button></div>`;
+}
+function chooseTest(mode){
+ state.mode=mode; state.index=0; state.shown=false; randomDirections={};
+ const title=mode==="smart"?"🧠 Умное повторение":mode==="new"?"🔴 Учить новые":mode==="maybe"?"🟡 Закреплять":"🟢 Поддерживать";
+ content.innerHTML=`<div class="panel"><h2>${title}</h2><p class="tiny">Выберите направление:</p><div style="display:grid;gap:12px;margin-top:18px">
+ <button class="btn primary" onclick="beginTest('ruTi')">Русский → тибетский</button>
+ <button class="btn" onclick="beginTest('tiRu')">Тибетский → русский</button>
+ <button class="btn" onclick="beginTest('random')">🔀 Рандомное изменение языка</button></div></div>`;
+}
+function beginTest(d){testDirection=d;state.index=0;state.shown=false;randomDirections={};render()}
+function setMode(m){state.mode=m;state.index=0;state.shown=false;if(["smart","new","maybe","know"].includes(m))return chooseTest(m);render()}
+function showAns(){state.shown=true;render()}
+function next(){let n=arr().length;if(n){state.index=(state.index+1)%n;state.shown=false;render()}}
+function prev(){let n=arr().length;if(n){state.index=(state.index-1+n)%n;state.shown=false;render()}}
+function rate(x){let a=arr();if(!a.length)return;let c=a[state.index],d=dir(c),q=c.direction[d];if(x==="dont"){c.status="dont";q.streak=0;q.interval=0;q.due=today()}else if(x==="maybe"){c.status="maybe";q.streak=(q.streak||0)+1;q.interval=1;q.due=addDays(1)}else{c.status="know";q.streak=(q.streak||0)+1;let seq=[1,3,7,14,30,60,120,240];q.interval=seq[Math.min(q.streak-1,seq.length-1)];q.due=addDays(q.interval)}c.lastReview=today();state.session.done++;if(x==="know")state.session.correct++;save();let n=arr().length;if(n)state.index=(state.index+1)%n;state.shown=false;render()}
+function renderHome(){let n={new:state.cards.filter(c=>c.status==="new").length,dont:state.cards.filter(c=>c.status==="dont").length,maybe:state.cards.filter(c=>c.status==="maybe").length,know:state.cards.filter(c=>c.status==="know").length},pct=Math.min(100,state.session.done/state.dailyGoal*100);content.innerHTML=`<div class="stats"><div class="stat"><b>${n.new+n.dont}</b><span>🔴 Активно</span></div><div class="stat"><b>${n.maybe}</b><span>🟡 Сомневаюсь</span></div><div class="stat"><b>${n.know}</b><span>🟢 Знаю</span></div></div><div class="panel dashboard"><h2>Сегодня</h2><div class="progress"><div style="width:${pct}%"></div></div><div class="tiny">${state.session.done}/${state.dailyGoal} карточек · ${state.session.correct} «Знаю»</div><div class="modecard"><h3>🧠 Умное повторение</h3><p>Само выбирает новые, слабые и созревшие для повторения слова.</p><button class="btn primary" onclick="setMode('smart')">Начать</button></div><div class="modecard"><h3>🔴 Учить новые</h3><p>${n.new+n.dont} карточек требуют активного обучения.</p><button class="btn" onclick="setMode('new')">Учить</button></div><div class="modecard"><h3>🟡 Закреплять</h3><p>${n.maybe} карточек с сомнением.</p><button class="btn" onclick="setMode('maybe')">Закреплять</button></div><div class="modecard"><h3>🟢 Поддерживать</h3><p>${n.know} выученных карточек проверяются редко, но регулярно.</p><button class="btn" onclick="setMode('know')">Повторять</button></div></div>`}
 function renderEdit(){
  content.innerHTML=`
  <div class="panel">
