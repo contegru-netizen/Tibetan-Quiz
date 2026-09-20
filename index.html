@@ -57,6 +57,21 @@ function setMode(m){state.mode=m;state.index=0;state.shown=false;render()} funct
 function rate(x){let a=arr();if(!a.length)return;let c=a[state.index],d=dir(c),q=c.direction[d];if(x==="dont"){c.status="dont";q.streak=0;q.interval=0;q.due=today()}else if(x==="maybe"){c.status="maybe";q.streak=(q.streak||0)+1;q.interval=1;q.due=addDays(1)}else{c.status="know";q.streak=(q.streak||0)+1;let seq=[1,3,7,14,30,60,120,240];q.interval=seq[Math.min(q.streak-1,seq.length-1)];q.due=addDays(q.interval)}c.lastReview=today();state.session.done++;if(x==="know")state.session.correct++;save();state.index=0;state.shown=false;render()}
 function renderHome(){let n={new:state.cards.filter(c=>c.status==="new").length,dont:state.cards.filter(c=>c.status==="dont").length,maybe:state.cards.filter(c=>c.status==="maybe").length,know:state.cards.filter(c=>c.status==="know").length},pct=Math.min(100,state.session.done/state.dailyGoal*100);content.innerHTML=`<div class="stats"><div class="stat"><b>${n.new+n.dont}</b><span>🔴 Активно</span></div><div class="stat"><b>${n.maybe}</b><span>🟡 Сомневаюсь</span></div><div class="stat"><b>${n.know}</b><span>🟢 Знаю</span></div></div><div class="panel dashboard"><h2>Сегодня</h2><div class="progress"><div style="width:${pct}%"></div></div><div class="tiny">${state.session.done}/${state.dailyGoal} карточек · ${state.session.correct} «Знаю»</div><div class="modecard"><h3>🧠 Умное повторение</h3><p>Само выбирает новые, слабые и созревшие для повторения слова.</p><button class="btn primary" onclick="setMode('smart')">Начать</button></div><div class="modecard"><h3>🔴 Учить новые</h3><p>${n.new+n.dont} карточек требуют активного обучения.</p><button class="btn" onclick="setMode('new')">Учить</button></div><div class="modecard"><h3>🟡 Закреплять</h3><p>${n.maybe} карточек с сомнением.</p><button class="btn" onclick="setMode('maybe')">Закреплять</button></div><div class="modecard"><h3>🟢 Поддерживать</h3><p>${n.know} выученных карточек проверяются редко, но регулярно.</p><button class="btn" onclick="setMode('know')">Повторять</button></div></div>`}
 function renderEdit(){
+ content.innerHTML=`
+ <div class="panel">
+   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+     <h2 style="margin:0">📚 Все слова</h2>
+     <button class="btn primary" type="button" onclick="showAddCard()">＋ Добавить карточку</button>
+   </div>
+   <div class="search" style="margin-top:14px">
+     <input id="searchBox" placeholder="Поиск по тибетскому, комментарию или русскому" oninput="fillWordList()">
+   </div>
+   <div id="wordListInfo" class="tiny" style="margin:8px 0 12px"></div>
+   <div id="list"></div>
+ </div>`;
+ fillWordList();
+}
+function fillWordList(){
  const listEl=document.getElementById("list");
  if(!listEl)return;
  const searchEl=document.getElementById("searchBox");
@@ -68,23 +83,25 @@ function renderEdit(){
  const info=document.getElementById("wordListInfo");
  if(info)info.textContent=`Всего слов: ${state.cards.length}. Показано: ${filtered.length}.`;
  if(!filtered.length){
-   listEl.innerHTML=`<div class="card"><div class="tiny">${state.cards.length?"По вашему запросу ничего не найдено.":"Пока нет внесённых слов."}</div></div>`;
+   listEl.innerHTML=`<div class="empty">${state.cards.length?"По вашему запросу ничего не найдено.":"Пока нет внесённых слов."}</div>`;
    return;
  }
  listEl.innerHTML=filtered.map(c=>`
    <div class="row">
-     <div>
+     <div style="min-width:0;flex:1">
        <div class="ti">${esc(c.ti||"")}</div>
        ${c.note?`<div class="ti-note">${esc(c.note)}</div>`:""}
        <div class="ru">${esc(c.ru||"")}</div>
        <span class="badge ${statusClass(c.status)}">${statusLabel(c.status)}</span>
      </div>
      <div class="row-actions">
-       <button class="btn" type="button" onclick="editCard('${c.id}')">✏️ Редактировать</button>
-       <button class="btn danger" type="button" onclick="deleteCard('${c.id}')">🗑 Удалить</button>
+       <button class="btn" type="button" onclick="editCardById(${JSON.stringify(String(c.id))})">✏️ Редактировать</button>
+       <button class="btn danger" type="button" onclick="deleteCardById(${JSON.stringify(String(c.id))})">🗑 Удалить</button>
      </div>
    </div>`).join("");
 }
+function editCardById(id){editCard(id)}
+function deleteCardById(id){deleteCard(id)}
 function showAddCard(){
  content.innerHTML=`<div class="panel addbox">
  <h2>＋ Новая карточка</h2>
@@ -95,7 +112,7 @@ function showAddCard(){
  <button class="btn primary" type="button" onclick="addCard()">Сохранить карточку</button>
  <div id="saveMessage" class="tiny" style="margin-top:10px"></div>
  </div>
- <div class="actions"><button class="btn" onclick="renderEdit()">Отмена</button></div>
+ <div class="actions"><button class="btn" onclick="setMode('edit')">Отмена</button></div>
  </div>`;
  setTimeout(()=>document.getElementById("newTi")?.focus(),50);
 }
