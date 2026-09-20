@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<title>Tibetan Quiz</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Tibetan Quiz">
+
+<style>
+:root{--ti:72px;--ru:28px;--bg:#f7f7f8;--fg:#111827;--muted:#6b7280;--card:#fff;--line:#e5e7eb;--accent:#2563eb}
+*{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--fg)}
+button,input,textarea{font:inherit} button{cursor:pointer;border:0}.app{max-width:760px;margin:auto;min-height:100dvh;padding:18px 16px calc(24px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px} h1{font-size:25px;margin:0}
+.icon{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 13px}
+nav{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:16px}nav button{padding:12px 6px;border-radius:12px;background:#e9eaed}nav button.active{background:var(--fg);color:#fff}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;box-shadow:0 2px 10px #00000008}
+.quiz{min-height:58dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}.prompt{font-size:var(--ti);line-height:1.35;overflow-wrap:anywhere}.answer{font-size:var(--ru);line-height:1.45;margin-top:25px;color:#374151;white-space:pre-wrap}.hidden{visibility:hidden}
+.actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:28px}.btn{padding:13px 18px;border-radius:13px;background:#eef0f3}.primary{background:var(--accent);color:#fff}.know{background:#dff6e7}.maybe{background:#fff1c9}.dont{background:#ffe0e0}
+.bottom{display:flex;justify-content:space-between;gap:10px;margin-top:14px;color:var(--muted);font-size:14px}.toolbar{display:flex;gap:8px;align-items:center}.quicknav{display:grid;grid-template-columns:1fr 1.35fr 1fr;gap:8px;margin-bottom:12px}.quicknav .btn{padding:11px 8px}.addbox{max-width:560px;margin:0 auto}.addbox h2{margin-top:0}@media(max-width:480px){.quicknav .btn{font-size:13px;padding:10px 5px}}
+.searchbox{width:100%;padding:13px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;margin-top:14px}.searchbox:focus{outline:2px solid #2563eb33;border-color:#2563eb}.searchhint{color:var(--muted);font-size:13px;margin:7px 0 0}.list{margin-top:16px;display:grid;gap:9px}.row-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;margin-top:8px}.btn.danger{border-color:#e0a0a0}.row{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px;display:flex;justify-content:space-between;gap:10px;align-items:center}.row .ti{font-size:28px}.row .ru{color:var(--muted)}.row button{background:#f0f1f3;border-radius:9px;padding:8px}
+.form{display:grid;gap:10px}.form input,.form textarea{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;background:#fff}.form textarea{min-height:90px}.settings{display:grid;gap:16px}.setting{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}.range{width:100%}
+.fullscreen .app{max-width:none}.fullscreen header,.fullscreen nav,.fullscreen .bottom{display:none}.fullscreen .panel{border:0;box-shadow:none;min-height:calc(100dvh - 30px);border-radius:0}.fullscreen{background:var(--bg)}
+.empty{text-align:center;color:var(--muted);padding:45px 15px}.count{color:var(--muted);font-size:14px;margin-bottom:8px}
+@media(max-width:480px){.panel{padding:17px}.quiz{min-height:62dvh}.prompt{font-size:var(--ti)}nav button{font-size:13px}}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;text-align:center}.stat b{display:block;font-size:23px}.stat span{font-size:12px;color:var(--muted)}.dashboard{display:grid;gap:12px}.modecard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}.modecard h3{margin:0 0 5px}.modecard p{margin:0;color:var(--muted);font-size:14px}.modecard button{margin-top:12px;width:100%}.progress{height:9px;background:#e7e8eb;border-radius:20px;overflow:hidden;margin:9px 0 4px}.progress>div{height:100%;background:var(--accent)}.tiny{font-size:13px;color:var(--muted)}.badge{display:inline-block;padding:4px 8px;border-radius:9px;font-size:12px;background:#eef0f3;color:#4b5563}.ti-note{font-size:0.95em;font-style:italic;opacity:.75;margin-top:4px;margin-bottom:6px}</style>
+</head>
+<body>
+<div class="app">
+<header><h1>🇹🇮 Tibetan Quiz</h1><div class="toolbar"><button class="icon" id="fullBtn" title="Полный экран">⛶</button><button class="icon" id="settingsBtn">⚙️</button></div></header>
+<div id="quickNav" class="quicknav">
+ <button class="btn" onclick="setMode('home')">🏠 Главная</button>
+ <button class="btn primary" onclick="showAddCard()">＋ Добавить карточку</button>
+ <button class="btn" onclick="renderEdit()">🔎 Карточки</button>
+</div>
+
+<nav id="nav"><button data-mode="smart">🧠 Умное</button><button data-mode="new">🔴 Новые</button><button data-mode="maybe">🟡 Закрепить</button></nav>
+<section id="content"></section>
+</div>
+<script>
+const KEY="tibetanQuiz.v2";
+const old=JSON.parse(localStorage.getItem("tibetanQuiz.v1")||"null");
+let state=JSON.parse(localStorage.getItem(KEY)||"null")||{cards:old?.cards||[],tiSize:old?.tiSize||78,ruSize:old?.ruSize||28,mode:"smart",index:0,shown:false,dailyGoal:20,session:{date:"",done:0,correct:0}};
+function save(){localStorage.setItem(KEY,JSON.stringify(state))} function today(){return new Date().toISOString().slice(0,10)}
+function ensure(c){c.status=c.status||"new";c.direction=c.direction||{tiRu:{streak:0,interval:0,due:null},ruTi:{streak:0,interval:0,due:null}};return c} state.cards.forEach(ensure); if(state.session.date!==today())state.session={date:today(),done:0,correct:0};
+function css(){document.documentElement.style.setProperty("--ti",state.tiSize+"px");document.documentElement.style.setProperty("--ru",state.ruSize+"px")} function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+function due(c,d){return !c.direction[d].due||c.direction[d].due<=today()} function addDays(n){let d=new Date(today()+"T12:00:00");d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)}
+function rank(c){return c.status==="new"?0:c.status==="dont"?1:c.status==="maybe"?2:3}
+function arr(){let a=state.cards.filter(c=>{if(state.mode==="new")return c.status==="new"||c.status==="dont";if(state.mode==="maybe")return c.status==="maybe"&&(due(c,"tiRu")||due(c,"ruTi"));if(state.mode==="know")return c.status==="know"&&(due(c,"tiRu")||due(c,"ruTi"));if(state.mode==="ti")return due(c,"tiRu");if(state.mode==="ru")return due(c,"ruTi");return due(c,"tiRu")||due(c,"ruTi")});return a.sort((a,b)=>rank(a)-rank(b))}
+function dir(c){if(state.mode==="ti")return"tiRu";if(state.mode==="ru")return"ruTi";let a=c.direction.tiRu,b=c.direction.ruTi;if(!a.due&&!b.due)return state.index%2?"ruTi":"tiRu";if(!a.due)return"tiRu";if(!b.due)return"ruTi";return a.due<=b.due?"tiRu":"ruTi"}
+function render(){css();document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active",b.dataset.mode===state.mode));if(state.mode==="edit")return renderEdit();if(state.mode==="settings")return renderSettings();if(state.mode==="home")return renderHome();let a=arr();if(!a.length){content.innerHTML='<div class="panel empty">Сейчас нет карточек для этого режима.<br><br><button class="btn primary" onclick="setMode(\'smart\')">Умное повторение</button></div>';return}if(state.index>=a.length)state.index=0;let c=a[state.index],d=dir(c),prompt=d==="tiRu"?c.ti:c.ru,answer=d==="tiRu"?c.ru:c.ti,noteHtml=(c.note&&d==="tiRu")?`<div class="ti-note">${esc(c.note)}</div>`:"";content.innerHTML=`<div class="panel quiz"><div class="count">${state.mode==="smart"?"🧠 Умное повторение":state.mode==="new"?"🔴 Учить новые":state.mode==="maybe"?"🟡 Закреплять":state.mode==="know"?"🟢 Поддерживать":d==="tiRu"?"Тибетский → Русский":"Русский → Тибетский"} · ${state.index+1}/${a.length}</div><div class="prompt">${esc(prompt)}</div>${noteHtml}<div class="answer ${state.shown?"":"hidden"}">${esc(answer)}</div><div class="actions">${state.shown?'<button class="btn dont" onclick="rate(\'dont\')">🔴 Не знаю</button><button class="btn maybe" onclick="rate(\'maybe\')">🟡 Сомневаюсь</button><button class="btn know" onclick="rate(\'know\')">🟢 Знаю</button>':'<button class="btn primary" onclick="showAns()">Показать ответ</button>'}</div><div class="actions"><button class="btn" onclick="prev()">←</button><button class="btn" onclick="next()">Следующая →</button></div></div><div class="bottom"><span>Статус: <b>${c.status||"new"}</b></span><button class="btn" onclick="renderEdit()">✏️ Карточки</button></div>`}
+function setMode(m){state.mode=m;state.index=0;state.shown=false;render()} function showAns(){state.shown=true;render()} function next(){let n=arr().length;if(n){state.index=(state.index+1)%n;state.shown=false;render()}} function prev(){let n=arr().length;if(n){state.index=(state.index-1+n)%n;state.shown=false;render()}}
+function rate(x){let a=arr();if(!a.length)return;let c=a[state.index],d=dir(c),q=c.direction[d];if(x==="dont"){c.status="dont";q.streak=0;q.interval=0;q.due=today()}else if(x==="maybe"){c.status="maybe";q.streak=(q.streak||0)+1;q.interval=1;q.due=addDays(1)}else{c.status="know";q.streak=(q.streak||0)+1;let seq=[1,3,7,14,30,60,120,240];q.interval=seq[Math.min(q.streak-1,seq.length-1)];q.due=addDays(q.interval)}c.lastReview=today();state.session.done++;if(x==="know")state.session.correct++;save();state.index=0;state.shown=false;render()}
+function renderHome(){let n={new:state.cards.filter(c=>c.status==="new").length,dont:state.cards.filter(c=>c.status==="dont").length,maybe:state.cards.filter(c=>c.status==="maybe").length,know:state.cards.filter(c=>c.status==="know").length},pct=Math.min(100,state.session.done/state.dailyGoal*100);content.innerHTML=`<div class="stats"><div class="stat"><b>${n.new+n.dont}</b><span>🔴 Активно</span></div><div class="stat"><b>${n.maybe}</b><span>🟡 Сомневаюсь</span></div><div class="stat"><b>${n.know}</b><span>🟢 Знаю</span></div></div><div class="panel dashboard"><h2>Сегодня</h2><div class="progress"><div style="width:${pct}%"></div></div><div class="tiny">${state.session.done}/${state.dailyGoal} карточек · ${state.session.correct} «Знаю»</div><div class="modecard"><h3>🧠 Умное повторение</h3><p>Само выбирает новые, слабые и созревшие для повторения слова.</p><button class="btn primary" onclick="setMode('smart')">Начать</button></div><div class="modecard"><h3>🔴 Учить новые</h3><p>${n.new+n.dont} карточек требуют активного обучения.</p><button class="btn" onclick="setMode('new')">Учить</button></div><div class="modecard"><h3>🟡 Закреплять</h3><p>${n.maybe} карточек с сомнением.</p><button class="btn" onclick="setMode('maybe')">Закреплять</button></div><div class="modecard"><h3>🟢 Поддерживать</h3><p>${n.know} выученных карточек проверяются редко, но регулярно.</p><button class="btn" onclick="setMode('know')">Повторять</button></div></div>`}
+function renderEdit(){
+ content.innerHTML=`<div class="panel">
+ <h2>Карточки</h2>
+ <div class="actions"><button class="btn primary" onclick="showAddCard()">＋ Добавить карточку</button></div>
+ <input id="cardSearch" class="searchbox" type="search" placeholder="🔎 Поиск по тибетскому слову или русскому переводу" oninput="renderCardList()">
+ <div class="searchhint" id="searchHint"></div><div class="list" id="cardList"></div>
+ <div class="actions"><button class="btn" onclick="exportCSV()">⬇️ Экспорт CSV</button><button class="btn" onclick="document.getElementById('csvFile').click()">⬆️ Импорт CSV</button>
+ <input id="csvFile" type="file" accept=".csv,text/csv" style="display:none" onchange="importCSV(event)"></div>
+ <div class="actions"><button class="btn" onclick="createBackup()">☁️ Backup</button><button class="btn" onclick="document.getElementById('backupFile').click()">♻️ Restore</button>
+ <input id="backupFile" type="file" accept=".json,application/json" style="display:none" onchange="restoreBackup(event)"></div>
+ </div>`;
+ renderCardList();
+}
+function showAddCard(){
+ content.innerHTML=`<div class="panel addbox">
+ <h2>＋ Новая карточка</h2>
+ <form class="form" onsubmit="addCard(event)">
+ <input id="newTi" placeholder="Тибетское слово" autocomplete="off" required>
+<input id="newNote" placeholder="Комментарий / произношение (необязательно)">
+ <textarea id="newRu" placeholder="Русский перевод" required></textarea>
+ <button class="btn primary" type="submit">Сохранить карточку</button>
+ </form>
+ <div class="actions"><button class="btn" onclick="renderEdit()">Отмена</button></div>
+ </div>`;
+ setTimeout(()=>document.getElementById("newTi")?.focus(),50);
+}
+function renderCardList(){
+ const input=document.getElementById("cardSearch"),list=document.getElementById("cardList"),hint=document.getElementById("searchHint");
+ if(!input||!list)return;
+ const q=input.value.trim().toLocaleLowerCase();
+ const filtered=state.cards.filter(c=>(String(c.ti||"")+" "+String(c.ru||"")).toLocaleLowerCase().includes(q));
+ list.innerHTML=filtered.map(c=>`<div class="row"><div><div class="ti">${esc(c.ti)}</div>${c.note?`<div class="ti-note">${esc(c.note)}</div>`:""}<div class="ru">${esc(c.ru)}</div><span class="badge ${statusClass(c.status)}">${statusLabel(c.status)}</span></div><div class="row-actions"><button class="btn" onclick="editCard(${c.id})">✏️ Редактировать</button><button class="btn danger" onclick="deleteCard(${c.id})">🗑 Удалить</button></div></div>`).join("");
+ hint.textContent=q?`Найдено: ${filtered.length} из ${state.cards.length}`:`Всего карточек: ${state.cards.length}`;
+ if(!filtered.length)list.innerHTML='<div class="empty">Ничего не найдено.</div>';
+}
+function addCard(e){e.preventDefault();state.cards.push(ensure({id:Date.now(),ti:newTi.value.trim(),note:newNote.value.trim(),ru:newRu.value.trim(),status:"new"}));save();newTi.value="";newNote.value="";newRu.value="";renderEdit()} function editCard(id){let c=state.cards.find(x=>x.id===id);if(!c)return;let ti=prompt("Тибетское слово:",c.ti);if(ti===null)return;let note=prompt("Комментарий / произношение:",c.note||"");if(note===null)return;let ru=prompt("Русский перевод:",c.ru);if(ru===null)return;c.ti=ti.trim();c.note=note.trim();c.ru=ru.trim();save();renderEdit()} function deleteCard(id){let c=state.cards.find(x=>x.id===id);if(!c)return;if(confirm(`Удалить карточку «${c.ti} — ${c.ru}»?`)){state.cards=state.cards.filter(x=>x.id!==id);save();renderEdit()}}
+function csvEscape(v){return '"'+String(v??"").replace(/"/g,'""')+'"'} function exportCSV(){let rows=[["tibetan","tibetan_note","russian"]];state.cards.forEach(c=>rows.push([c.ti,c.note||"",c.ru]));let b=new Blob(["\uFEFF"+rows.map(r=>r.map(csvEscape).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a");a.href=u;a.download="tibetan_quiz_cards.csv";a.click();URL.revokeObjectURL(u)}
+function parseCSV(t){t=t.replace(/^\uFEFF/,"");let R=[],r=[],f="",q=false;for(let i=0;i<t.length;i++){let c=t[i],n=t[i+1];if(q){if(c=='"'&&n=='"'){f+='"';i++}else if(c=='"')q=false;else f+=c}else if(c=='"')q=true;else if(c==','){r.push(f);f=""}else if(c=='\n'){r.push(f);R.push(r);r=[];f=""}else if(c!='\r')f+=c}if(f||r.length){r.push(f);R.push(r)}return R}
+function importCSV(e){
+  const file=e.target.files&&e.target.files[0]; if(!file)return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const lines=reader.result.replace(/^\\uFEFF/,"").split(/\\r?\\n/).filter(x=>x.trim());
+      if(!lines.length)throw new Error("Пустой CSV");
+      const parse=line=>{const a=[];let s="",q=false;for(let i=0;i<line.length;i++){let c=line[i];if(c==='"'){if(q&&line[i+1]==='"'){s+='"';i++}else q=!q}else if(c===","&&!q){a.push(s);s=""}else s+=c}a.push(s);return a.map(x=>x.trim())};
+      const rows=lines.map(parse), h=rows[0].map(x=>x.toLowerCase());
+      let ti=h.indexOf("tibetan"), note=h.indexOf("tibetan_note"), ru=h.indexOf("russian"); if(ti<0||ru<0){ti=0;note=-1;ru=1}
+      const existing=new Set(state.cards.map(c=>(`${c.ti||""}\\u0000${c.ru||""}`).toLowerCase().trim()));
+      let added=0, skipped=0;
+      rows.slice(1).forEach(r=>{
+        const t=(r[ti]||"").trim(), n=note>=0?(r[note]||"").trim():"", v=(r[ru]||"").trim(); if(!t&&!v)return;
+        const key=(`${t}\\u0000${v}`).toLowerCase().trim();
+        if(existing.has(key)) skipped++;
+        else {state.cards.push(ensure({id:Date.now()+Math.random(),ti:t,note:n,ru:v,status:"new"}));existing.add(key);added++}
+      });
+      save(); renderEdit();
+      alert(`Импорт завершён.\\nДобавлено: ${added}\\nДубликатов пропущено: ${skipped}`);
+    }catch(err){alert("Не удалось импортировать CSV: "+err.message)}
+    e.target.value="";
+  };
+  reader.readAsText(file,"UTF-8");
+}
+function createBackup(){let b={app:"Tibetan Quiz",version:2,createdAt:new Date().toISOString(),cards:state.cards,settings:{tiSize:state.tiSize,ruSize:state.ruSize},dailyGoal:state.dailyGoal},u=URL.createObjectURL(new Blob([JSON.stringify(b,null,2)],{type:"application/json"})),a=document.createElement("a");a.href=u;a.download="tibetan_quiz_backup_"+today()+".json";a.click();URL.revokeObjectURL(u)}
+function restoreBackup(e){let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=()=>{try{let b=JSON.parse(r.result);if(b.app!=="Tibetan Quiz"||!Array.isArray(b.cards))throw Error("Это не backup Tibetan Quiz");if(!confirm("Восстановить "+b.cards.length+" карточек?"))return;state.cards=b.cards.map(ensure);if(b.settings){state.tiSize=Number(b.settings.tiSize)||78;state.ruSize=Number(b.settings.ruSize)||28}if(b.dailyGoal)state.dailyGoal=Number(b.dailyGoal);state.index=0;state.shown=false;save();render();alert("Backup восстановлен")}catch(x){alert("Ошибка восстановления: "+x.message)}finally{e.target.value=""}};r.readAsText(f,"UTF-8")}
+function renderSettings(){content.innerHTML=`<div class="panel settings"><h2>Настройки</h2><div class="setting"><b>Тибетский: <span id="tiVal">${state.tiSize}</span> px</b><input class="range" type="range" min="36" max="120" value="${state.tiSize}" oninput="state.tiSize=+this.value;tiVal.textContent=this.value;css();save()"></div><div class="setting"><b>Русский: <span id="ruVal">${state.ruSize}</span> px</b><input class="range" type="range" min="18" max="60" value="${state.ruSize}" oninput="state.ruSize=+this.value;ruVal.textContent=this.value;css();save()"></div><div class="setting"><b>Дневная цель: <span id="goalVal">${state.dailyGoal}</span></b><input class="range" type="range" min="5" max="100" value="${state.dailyGoal}" oninput="state.dailyGoal=+this.value;goalVal.textContent=this.value;save()"></div></div>`}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>setMode(b.dataset.mode));settingsBtn.onclick=()=>{state.mode="settings";render()};fullBtn.onclick=()=>{document.documentElement.classList.toggle("fullscreen");fullBtn.textContent=document.documentElement.classList.contains("fullscreen")?"✕":"⛶"};document.addEventListener("keydown",e=>{if(state.mode==="settings"||state.mode==="edit")return;if(e.key===" "){e.preventDefault();showAns()}if(e.key==="ArrowRight")next();if(e.key==="ArrowLeft")prev()});render();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./service-worker.js"));
+}
+</script>
+
+</body>
+</html>
